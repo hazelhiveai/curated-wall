@@ -6,12 +6,26 @@ const WHATSAPP_NUMBER = '916361096873';
 const PRICE = '₹999';
 const MAX_PICKS = 3;
 
+// Constants
+const DOUBLE_TAP_MS = 300;
+const SCROLL_THRESHOLD = 400;
+const ZOOM_LEVEL = 3;
+const TOAST_DURATION = 3000;
+const TOAST_FADE_MS = 300;
+
 // Color palettes for placeholder images
 const PALETTE = [
   '#F4A261','#264653','#606C38','#6D597A','#BC6C25','#577590',
   '#F94144','#355070','#003049','#2B2D42','#E63946','#1D3557',
   '#CDB4DB','#BDE0FE','#780000','#669BBC','#3A86FF','#8338EC',
 ];
+
+// HTML escape to prevent XSS when interpolating into innerHTML
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 let allPrints = [];
 let selectedPrints = [];
@@ -22,11 +36,13 @@ async function init() {
     const res = await fetch('data/stock.json');
     allPrints = await res.json();
     renderGallery();
+    setupSelectDelegation();
     setupFilters();
     setupModal();
     setupZoom();
     setupScrollTop();
   } catch (err) {
+    console.error('Failed to load prints:', err);
     document.getElementById('product-grid').innerHTML =
       '<p style="text-align:center;color:#999;padding:40px;">Unable to load prints. Please try again later.</p>';
   }
@@ -46,14 +62,34 @@ function renderGallery() {
 
   emptyMsg.style.display = 'none';
   grid.innerHTML = filtered.map((print, i) => createCard(print, i)).join('');
+
+  // Attach image error handlers (safe placeholder without innerHTML XSS)
+  grid.querySelectorAll('.product-card img').forEach(img => {
+    img.addEventListener('error', function () {
+      const card = this.closest('.product-card');
+      const color = card.dataset.color || '#ccc';
+      const name = card.querySelector('.card-name').textContent;
+      const wrapper = this.parentElement;
+      const placeholder = document.createElement('div');
+      placeholder.className = 'placeholder';
+      placeholder.style.background = color;
+      const icon = document.createElement('span');
+      icon.className = 'placeholder-icon';
+      icon.textContent = '▢';
+      const label = document.createElement('span');
+      label.textContent = name;
+      placeholder.appendChild(icon);
+      placeholder.appendChild(label);
+      wrapper.replaceChild(placeholder, this);
+    }, { once: true });
+  });
 }
 
 function filterPrints() {
-  let results;
-  if (currentFilter === 'all') results = allPrints.filter(p => p.stock > 0);
-  else if (currentFilter === 'portrait') results = allPrints.filter(p => p.stock > 0 && p.orientation === 'portrait');
-  else if (currentFilter === 'landscape') results = allPrints.filter(p => p.stock > 0 && p.orientation === 'landscape');
-  else results = allPrints.filter(p => p.stock > 0);
+  const inStock = allPrints.filter(p => p.stock > 0);
+  const results = currentFilter === 'all'
+    ? inStock
+    : inStock.filter(p => p.orientation === currentFilter);
 
   // Sort portrait-first, then landscape
   return results.sort((a, b) => {
@@ -70,7 +106,11 @@ function createCard(print, index) {
   const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : print.stock >= 100 ? 'Available' : `${print.stock} in stock`;
   const color = PALETTE[index % PALETTE.length];
   const aspectClass = print.orientation === 'portrait' ? 'aspect-portrait' : 'aspect-landscape';
-  const imgPath = `images/collection/${print.id}.jpg`;
+  const safeId = escapeHTML(print.id);
+  const safeName = escapeHTML(print.name);
+  const safeDesc = escapeHTML(print.description);
+  const safeOrientation = escapeHTML(print.orientation);
+  const imgPath = `images/collection/${safeId}.jpg`;
 
   let selectBtnText = 'Select';
   let selectBtnClass = 'btn-select';
@@ -86,28 +126,36 @@ function createCard(print, index) {
   }
 
   return `
-    <article class="product-card${isSoldOut ? ' sold-out' : ''}${isSelected ? ' card-selected' : ''}" data-id="${print.id}">
+    <article class="product-card${isSoldOut ? ' sold-out' : ''}${isSelected ? ' card-selected' : ''}" data-id="${safeId}" data-color="${color}">
       <div class="card-image ${aspectClass}">
         <img src="${imgPath}"
-             alt="${print.name} — ${print.orientation} art print"
-             onerror="this.parentElement.innerHTML='<div class=\\'placeholder\\' style=\\'background:${color}\\'><span class=\\'placeholder-icon\\'>&#9634;</span><span>${print.name}</span></div>'"
+             alt="${safeName} — ${safeOrientation} art print"
+             loading="lazy"
         >
 
         ${isSoldOut ? '<div class="sold-out-badge">Sold Out</div>' : ''}
         ${isSelected ? '<div class="selected-badge">✓</div>' : ''}
       </div>
       <div class="card-body">
-        <h3 class="card-name">${print.name}</h3>
-        <p class="card-description">${print.description}</p>
+        <h3 class="card-name">${safeName}</h3>
+        <p class="card-description">${safeDesc}</p>
         <div class="card-footer">
           <span class="card-stock ${stockClass}">${stockText}</span>
         </div>
-        ${isSoldOut ? '' : `<button class="${selectBtnClass}" onclick="toggleSelect('${print.id}')" ${isFull ? 'disabled' : ''} title="${selectBtnTitle}">${selectBtnText}</button>`}
+        ${isSoldOut ? '' : `<button class="${selectBtnClass}" data-select="${safeId}" ${isFull ? 'disabled' : ''} title="${selectBtnTitle}">${selectBtnText}</button>`}
       </div>
     </article>`;
 }
 
 /* --- Selection Logic --- */
+function setupSelectDelegation() {
+  document.getElementById('product-grid').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-select]');
+    if (!btn) return;
+    toggleSelect(btn.dataset.select);
+  });
+}
+
 function toggleSelect(printId) {
   const index = selectedPrints.findIndex(p => p.id === printId);
   if (index > -1) {
@@ -117,8 +165,54 @@ function toggleSelect(printId) {
     const print = allPrints.find(p => p.id === printId);
     if (print) selectedPrints.push(print);
   }
-  renderGallery();
+  updateCardStates();
   updateSelectionBar();
+}
+
+function updateCardStates() {
+  const grid = document.getElementById('product-grid');
+  const cards = grid.querySelectorAll('.product-card');
+  const isFull = selectedPrints.length >= MAX_PICKS;
+
+  cards.forEach(card => {
+    const id = card.dataset.id;
+    const isSelected = selectedPrints.some(p => p.id === id);
+
+    // Update card selection class
+    card.classList.toggle('card-selected', isSelected);
+
+    // Update selected badge
+    let badge = card.querySelector('.selected-badge');
+    if (isSelected && !badge) {
+      badge = document.createElement('div');
+      badge.className = 'selected-badge';
+      badge.textContent = '✓';
+      card.querySelector('.card-image').appendChild(badge);
+    } else if (!isSelected && badge) {
+      badge.remove();
+    }
+
+    // Update select button
+    const btn = card.querySelector('[data-select]');
+    if (!btn) return;
+
+    if (isSelected) {
+      btn.textContent = '✓ Selected';
+      btn.className = 'btn-select selected';
+      btn.disabled = false;
+      btn.title = 'Click to deselect';
+    } else if (isFull) {
+      btn.textContent = 'Select';
+      btn.className = 'btn-select full';
+      btn.disabled = true;
+      btn.title = '';
+    } else {
+      btn.textContent = 'Select';
+      btn.className = 'btn-select';
+      btn.disabled = false;
+      btn.title = 'Click to select';
+    }
+  });
 }
 
 function updateSelectionBar() {
@@ -143,20 +237,16 @@ function updateSelectionBar() {
     const waText = encodeURIComponent(
       `Hi! I'd like to order a frame with these ${count} prints: ${printNames}. Is this available?`
     );
-    ctaEl.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     ctaEl.classList.remove('disabled');
-    ctaEl.removeAttribute('aria-disabled');
-    ctaEl.setAttribute('target', '_blank');
-    ctaEl.setAttribute('rel', 'noopener');
-    ctaEl.onclick = null;
+    ctaEl.disabled = false;
+    ctaEl.onclick = () => window.open(waUrl, '_blank', 'noopener');
   } else {
-    ctaEl.href = '#';
-    ctaEl.classList.remove('disabled');
-    ctaEl.removeAttribute('aria-disabled');
-    ctaEl.removeAttribute('target');
-    ctaEl.onclick = (e) => {
-      e.preventDefault();
-      showToast(`Please select ${MAX_PICKS - count} more print${MAX_PICKS - count > 1 ? 's' : ''} to complete your set of ${MAX_PICKS}.`);
+    ctaEl.classList.add('disabled');
+    ctaEl.disabled = false;
+    ctaEl.onclick = () => {
+      const remaining = MAX_PICKS - count;
+      showToast(`Please select ${remaining} more print${remaining > 1 ? 's' : ''} to complete your set of ${MAX_PICKS}.`);
     };
   }
 }
@@ -168,6 +258,8 @@ function showToast(message) {
 
   const toast = document.createElement('div');
   toast.className = 'toast';
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
   toast.textContent = message;
   document.body.appendChild(toast);
 
@@ -176,8 +268,8 @@ function showToast(message) {
 
   setTimeout(() => {
     toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+    setTimeout(() => toast.remove(), TOAST_FADE_MS);
+  }, TOAST_DURATION);
 }
 
 /* --- Detail Modal Logic --- */
@@ -191,10 +283,10 @@ function setupModal() {
   const selectBtn = document.getElementById('modal-select');
 
   document.getElementById('product-grid').addEventListener('click', (e) => {
-    if (e.target.closest('.btn-select')) return;
+    if (e.target.closest('[data-select]')) return;
     const card = e.target.closest('.product-card');
     if (!card) return;
-    openModal(card.dataset.id);
+    openModal(card.dataset.id, card);
   });
 
   closeBtn.addEventListener('click', closeModal);
@@ -217,20 +309,49 @@ function setupModal() {
     if (e.key === 'Escape') closeModal();
     if (e.key === 'ArrowLeft') navigateModal(-1);
     if (e.key === 'ArrowRight') navigateModal(1);
+    if (e.key === 'Tab') trapFocus(e);
   });
 }
 
-function openModal(printId) {
+let modalTriggerEl = null;
+
+function openModal(printId, triggerEl) {
+  modalTriggerEl = triggerEl || null;
   modalPrintId = printId;
   updateModalContent();
-  document.getElementById('modal-overlay').classList.add('active');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
+  // Move focus into modal
+  document.getElementById('modal-close').focus();
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
   document.body.style.overflow = '';
   modalPrintId = null;
+  // Return focus to the card that opened the modal
+  if (modalTriggerEl) {
+    modalTriggerEl.focus();
+    modalTriggerEl = null;
+  }
+}
+
+function trapFocus(e) {
+  const overlay = document.getElementById('modal-overlay');
+  if (!overlay.classList.contains('active')) return;
+  const modal = overlay.querySelector('.modal');
+  const focusable = modal.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])');
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 function navigateModal(direction) {
@@ -297,7 +418,6 @@ function updateModalContent() {
 function setupZoom() {
   const container = document.getElementById('modal-image');
   const img = document.getElementById('modal-img');
-  const ZOOM = 3;
   let isZoomed = false;
 
   function enterZoom(clientX, clientY) {
@@ -305,7 +425,7 @@ function setupZoom() {
     container.classList.add('zoomed');
     // Set background image to the full-res source
     container.style.backgroundImage = `url('${img.src}')`;
-    container.style.backgroundSize = `${ZOOM * 100}%`;
+    container.style.backgroundSize = `${ZOOM_LEVEL * 100}%`;
     panZoom(clientX, clientY);
   }
 
@@ -343,7 +463,7 @@ function setupZoom() {
   let lastTap = 0;
   container.addEventListener('touchend', (e) => {
     const now = Date.now();
-    if (now - lastTap < 300) {
+    if (now - lastTap < DOUBLE_TAP_MS) {
       e.preventDefault();
       if (isZoomed) {
         exitZoom();
@@ -384,13 +504,15 @@ function setupFilters() {
 /* --- Scroll to Top --- */
 function setupScrollTop() {
   const btn = document.getElementById('scroll-top');
+  let ticking = false;
 
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) {
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
-    }
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      btn.classList.toggle('visible', window.scrollY > SCROLL_THRESHOLD);
+      ticking = false;
+    });
   });
 
   btn.addEventListener('click', () => {

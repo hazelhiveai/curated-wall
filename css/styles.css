@@ -63,6 +63,25 @@ ul {
   list-style: none;
 }
 
+/* --- Focus Styles (Keyboard Accessibility) --- */
+:focus-visible {
+  outline: 2px solid var(--color-whatsapp);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-whatsapp);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.product-card:focus-visible {
+  outline: 2px solid var(--color-whatsapp);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
 /* --- Header --- */
 .header {
   position: sticky;
@@ -349,7 +368,7 @@ ul {
 
 .btn-whatsapp {
   background: var(--color-whatsapp);
-  color: #fff;
+  color: #2c2c2c;
   width: 100%;
   padding: 12px 20px;
   font-size: 0.9rem;
@@ -591,7 +610,7 @@ ul {
   height: 32px;
   border-radius: 50%;
   background: var(--color-whatsapp);
-  color: #fff;
+  color: #2c2c2c;
   font-size: 1rem;
   font-weight: 700;
   display: flex;
@@ -688,12 +707,13 @@ ul {
 .btn-select.selected {
   border-color: var(--color-whatsapp);
   background: var(--color-whatsapp);
-  color: #fff;
+  color: #2c2c2c;
 }
 
 .btn-select.selected:hover {
   background: #1ebe5d;
   border-color: #1ebe5d;
+  color: #2c2c2c;
 }
 
 .btn-select.full {
