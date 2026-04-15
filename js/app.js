@@ -80,7 +80,7 @@ function createCard(print, index) {
              alt="${print.name} — ${print.orientation} art print"
              onerror="this.parentElement.innerHTML='<div class=\\'placeholder\\' style=\\'background:${color}\\'><span class=\\'placeholder-icon\\'>&#9634;</span><span>${print.name}</span></div>'"
         >
-        <span class="orientation-badge">${print.orientation}</span>
+
         ${isSoldOut ? '<div class="sold-out-badge">Sold Out</div>' : ''}
         ${isSelected ? '<div class="selected-badge">✓</div>' : ''}
       </div>
