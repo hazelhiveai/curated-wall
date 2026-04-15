@@ -58,7 +58,7 @@ function createCard(print, index) {
   const isSelected = selectedPrints.some(p => p.id === print.id);
   const isFull = selectedPrints.length >= MAX_PICKS && !isSelected;
   const stockClass = isSoldOut ? 'out-of-stock' : print.stock === 1 ? 'low-stock' : 'in-stock';
-  const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : `${print.stock} in stock`;
+  const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : print.stock >= 100 ? 'Available' : `${print.stock} in stock`;
   const color = PALETTE[index % PALETTE.length];
   const aspectClass = print.orientation === 'portrait' ? 'aspect-portrait' : 'aspect-landscape';
   const imgPath = `images/collection/${print.id}.jpg`;
