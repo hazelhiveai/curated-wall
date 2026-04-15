@@ -25,6 +25,7 @@ async function init() {
     setupFilters();
     setupModal();
     setupZoom();
+    setupScrollTop();
   } catch (err) {
     document.getElementById('product-grid').innerHTML =
       '<p style="text-align:center;color:#999;padding:40px;">Unable to load prints. Please try again later.</p>';
@@ -73,12 +74,15 @@ function createCard(print, index) {
 
   let selectBtnText = 'Select';
   let selectBtnClass = 'btn-select';
+  let selectBtnTitle = 'Click to select';
   if (isSelected) {
     selectBtnText = '✓ Selected';
     selectBtnClass = 'btn-select selected';
+    selectBtnTitle = 'Click to deselect';
   } else if (isFull) {
     selectBtnText = 'Select';
     selectBtnClass = 'btn-select full';
+    selectBtnTitle = '';
   }
 
   return `
@@ -98,7 +102,7 @@ function createCard(print, index) {
         <div class="card-footer">
           <span class="card-stock ${stockClass}">${stockText}</span>
         </div>
-        ${isSoldOut ? '' : `<button class="${selectBtnClass}" onclick="toggleSelect('${print.id}')" ${isFull ? 'disabled' : ''}>${selectBtnText}</button>`}
+        ${isSoldOut ? '' : `<button class="${selectBtnClass}" onclick="toggleSelect('${print.id}')" ${isFull ? 'disabled' : ''} title="${selectBtnTitle}">${selectBtnText}</button>`}
       </div>
     </article>`;
 }
@@ -134,10 +138,10 @@ function updateSelectionBar() {
   countEl.textContent = `${count} of ${MAX_PICKS} prints selected`;
   namesEl.textContent = selectedPrints.map(p => p.name).join(' · ');
 
-  if (count > 0) {
+  if (count === MAX_PICKS) {
     const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
     const waText = encodeURIComponent(
-      `Hi! I'd like to order a frame with these ${count} print${count > 1 ? 's' : ''}: ${printNames}. Is this available?`
+      `Hi! I'd like to order a frame with these ${count} prints: ${printNames}. Is this available?`
     );
     ctaEl.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     ctaEl.classList.remove('disabled');
@@ -145,7 +149,35 @@ function updateSelectionBar() {
     ctaEl.setAttribute('target', '_blank');
     ctaEl.setAttribute('rel', 'noopener');
     ctaEl.onclick = null;
+  } else {
+    ctaEl.href = '#';
+    ctaEl.classList.remove('disabled');
+    ctaEl.removeAttribute('aria-disabled');
+    ctaEl.removeAttribute('target');
+    ctaEl.onclick = (e) => {
+      e.preventDefault();
+      showToast(`Please select ${MAX_PICKS - count} more print${MAX_PICKS - count > 1 ? 's' : ''} to complete your set of ${MAX_PICKS}.`);
+    };
   }
+}
+
+/* --- Toast Notification --- */
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // Trigger reflow then show
+  requestAnimationFrame(() => toast.classList.add('visible'));
+
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 /* --- Detail Modal Logic --- */
@@ -346,6 +378,23 @@ function setupFilters() {
       currentFilter = btn.dataset.filter;
       renderGallery();
     });
+  });
+}
+
+/* --- Scroll to Top --- */
+function setupScrollTop() {
+  const btn = document.getElementById('scroll-top');
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  });
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
 
