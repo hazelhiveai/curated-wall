@@ -15,7 +15,7 @@ const PALETTE = [
 
 let allPrints = [];
 let selectedPrints = [];
-let currentFilter = 'available';
+let currentFilter = 'all';
 
 async function init() {
   try {
@@ -23,6 +23,8 @@ async function init() {
     allPrints = await res.json();
     renderGallery();
     setupFilters();
+    setupModal();
+    setupZoom();
   } catch (err) {
     document.getElementById('product-grid').innerHTML =
       '<p style="text-align:center;color:#999;padding:40px;">Unable to load prints. Please try again later.</p>';
@@ -46,11 +48,17 @@ function renderGallery() {
 }
 
 function filterPrints() {
-  if (currentFilter === 'available') return allPrints.filter(p => p.stock > 0);
-  if (currentFilter === 'all') return allPrints;
-  if (currentFilter === 'portrait') return allPrints.filter(p => p.stock > 0 && p.orientation === 'portrait');
-  if (currentFilter === 'landscape') return allPrints.filter(p => p.stock > 0 && p.orientation === 'landscape');
-  return allPrints;
+  let results;
+  if (currentFilter === 'all') results = allPrints.filter(p => p.stock > 0);
+  else if (currentFilter === 'portrait') results = allPrints.filter(p => p.stock > 0 && p.orientation === 'portrait');
+  else if (currentFilter === 'landscape') results = allPrints.filter(p => p.stock > 0 && p.orientation === 'landscape');
+  else results = allPrints.filter(p => p.stock > 0);
+
+  // Sort portrait-first, then landscape
+  return results.sort((a, b) => {
+    if (a.orientation === b.orientation) return 0;
+    return a.orientation === 'portrait' ? -1 : 1;
+  });
 }
 
 function createCard(print, index) {
@@ -138,6 +146,195 @@ function updateSelectionBar() {
     ctaEl.setAttribute('rel', 'noopener');
     ctaEl.onclick = null;
   }
+}
+
+/* --- Detail Modal Logic --- */
+let modalPrintId = null;
+
+function setupModal() {
+  const overlay = document.getElementById('modal-overlay');
+  const closeBtn = document.getElementById('modal-close');
+  const prevBtn = document.getElementById('modal-prev');
+  const nextBtn = document.getElementById('modal-next');
+  const selectBtn = document.getElementById('modal-select');
+
+  document.getElementById('product-grid').addEventListener('click', (e) => {
+    if (e.target.closest('.btn-select')) return;
+    const card = e.target.closest('.product-card');
+    if (!card) return;
+    openModal(card.dataset.id);
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  prevBtn.addEventListener('click', () => navigateModal(-1));
+  nextBtn.addEventListener('click', () => navigateModal(1));
+
+  selectBtn.addEventListener('click', () => {
+    if (modalPrintId) {
+      toggleSelect(modalPrintId);
+      updateModalContent();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'ArrowLeft') navigateModal(-1);
+    if (e.key === 'ArrowRight') navigateModal(1);
+  });
+}
+
+function openModal(printId) {
+  modalPrintId = printId;
+  updateModalContent();
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  modalPrintId = null;
+}
+
+function navigateModal(direction) {
+  const filtered = filterPrints();
+  const currentIndex = filtered.findIndex(p => p.id === modalPrintId);
+  if (currentIndex === -1) return;
+  const nextIndex = (currentIndex + direction + filtered.length) % filtered.length;
+  modalPrintId = filtered[nextIndex].id;
+  updateModalContent();
+}
+
+function updateModalContent() {
+  const print = allPrints.find(p => p.id === modalPrintId);
+  if (!print) return;
+
+  const filtered = filterPrints();
+  const currentIndex = filtered.findIndex(p => p.id === modalPrintId);
+
+  document.getElementById('modal-img').src = `images/collection/${print.id}.jpg`;
+  document.getElementById('modal-img').alt = print.name;
+  document.getElementById('modal-name').textContent = print.name;
+  document.getElementById('modal-description').textContent = print.description;
+
+  const stockEl = document.getElementById('modal-stock');
+  const isSelected = selectedPrints.some(p => p.id === print.id);
+  const isFull = selectedPrints.length >= MAX_PICKS && !isSelected;
+
+  if (print.stock === 0) {
+    stockEl.textContent = 'Sold Out';
+    stockEl.className = 'modal-stock card-stock out-of-stock';
+  } else if (print.stock === 1) {
+    stockEl.textContent = 'Only 1 left';
+    stockEl.className = 'modal-stock card-stock low-stock';
+  } else {
+    stockEl.textContent = print.stock >= 100 ? 'Available' : `${print.stock} in stock`;
+    stockEl.className = 'modal-stock card-stock in-stock';
+  }
+
+  const selectBtn = document.getElementById('modal-select');
+  if (print.stock === 0) {
+    selectBtn.style.display = 'none';
+  } else {
+    selectBtn.style.display = 'block';
+    if (isSelected) {
+      selectBtn.textContent = '✓ Selected';
+      selectBtn.className = 'btn-select modal-select selected';
+      selectBtn.disabled = false;
+    } else if (isFull) {
+      selectBtn.textContent = 'Select';
+      selectBtn.className = 'btn-select modal-select full';
+      selectBtn.disabled = true;
+    } else {
+      selectBtn.textContent = 'Select';
+      selectBtn.className = 'btn-select modal-select';
+      selectBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('modal-counter').textContent =
+    `${currentIndex + 1} of ${filtered.length} prints`;
+}
+
+/* --- Pan-Zoom Logic --- */
+function setupZoom() {
+  const container = document.getElementById('modal-image');
+  const img = document.getElementById('modal-img');
+  const ZOOM = 3;
+  let isZoomed = false;
+
+  function enterZoom(clientX, clientY) {
+    isZoomed = true;
+    container.classList.add('zoomed');
+    // Set background image to the full-res source
+    container.style.backgroundImage = `url('${img.src}')`;
+    container.style.backgroundSize = `${ZOOM * 100}%`;
+    panZoom(clientX, clientY);
+  }
+
+  function exitZoom() {
+    isZoomed = false;
+    container.classList.remove('zoomed');
+    container.style.backgroundImage = '';
+  }
+
+  function panZoom(clientX, clientY) {
+    const rect = container.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    container.style.backgroundPosition = `${x}% ${y}%`;
+  }
+
+  // Desktop: click to toggle, move to pan
+  container.addEventListener('click', (e) => {
+    if (isZoomed) {
+      exitZoom();
+    } else {
+      enterZoom(e.clientX, e.clientY);
+    }
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    if (isZoomed) panZoom(e.clientX, e.clientY);
+  });
+
+  container.addEventListener('mouseleave', () => {
+    if (isZoomed) exitZoom();
+  });
+
+  // Mobile: double-tap to toggle, drag to pan
+  let lastTap = 0;
+  container.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      e.preventDefault();
+      if (isZoomed) {
+        exitZoom();
+      } else {
+        const touch = e.changedTouches[0];
+        enterZoom(touch.clientX, touch.clientY);
+      }
+    }
+    lastTap = now;
+  });
+
+  container.addEventListener('touchmove', (e) => {
+    if (isZoomed && e.touches.length === 1) {
+      e.preventDefault();
+      panZoom(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  // Reset zoom when navigating to a different print
+  const observer = new MutationObserver(() => {
+    if (isZoomed) exitZoom();
+  });
+  observer.observe(img, { attributes: true, attributeFilter: ['src'] });
 }
 
 /* --- Filter Logic --- */
