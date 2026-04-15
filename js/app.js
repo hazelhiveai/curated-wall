@@ -61,7 +61,7 @@ function createCard(print, index) {
   const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : `${print.stock} in stock`;
   const color = PALETTE[index % PALETTE.length];
   const aspectClass = print.orientation === 'portrait' ? 'aspect-portrait' : 'aspect-landscape';
-  const imgPath = `images/prints/${print.id}.jpg`;
+  const imgPath = `images/collection/${print.id}.jpg`;
 
   let selectBtnText = 'Select';
   let selectBtnClass = 'btn-select';
