@@ -40,6 +40,7 @@ async function init() {
     setupFilters();
     setupModal();
     setupZoom();
+    setupReviewModal();
     setupScrollTop();
   } catch (err) {
     console.error('Failed to load prints:', err);
@@ -233,14 +234,9 @@ function updateSelectionBar() {
   namesEl.textContent = selectedPrints.map(p => p.name).join(' · ');
 
   if (count === MAX_PICKS) {
-    const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
-    const waText = encodeURIComponent(
-      `Hi! I'd like to order a frame with these ${count} prints: ${printNames}. Is this available?`
-    );
-    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     ctaEl.classList.remove('disabled');
     ctaEl.disabled = false;
-    ctaEl.onclick = () => window.open(waUrl, '_blank', 'noopener');
+    ctaEl.onclick = () => openReviewModal();
   } else {
     ctaEl.classList.add('disabled');
     ctaEl.disabled = false;
@@ -314,12 +310,15 @@ function setupModal() {
 }
 
 let modalTriggerEl = null;
+let modalPreviewMode = false;
 
-function openModal(printId, triggerEl) {
+function openModal(printId, triggerEl, previewMode) {
   modalTriggerEl = triggerEl || null;
+  modalPreviewMode = !!previewMode;
   modalPrintId = printId;
   updateModalContent();
   const overlay = document.getElementById('modal-overlay');
+  overlay.classList.toggle('preview-mode', modalPreviewMode);
   overlay.classList.add('active');
   document.body.style.overflow = 'hidden';
   // Move focus into modal
@@ -327,13 +326,24 @@ function openModal(printId, triggerEl) {
 }
 
 function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('active');
-  document.body.style.overflow = '';
+  const overlay = document.getElementById('modal-overlay');
+  const wasPreview = modalPreviewMode;
+  overlay.classList.remove('active', 'preview-mode');
   modalPrintId = null;
-  // Return focus to the card that opened the modal
-  if (modalTriggerEl) {
-    modalTriggerEl.focus();
-    modalTriggerEl = null;
+  modalPreviewMode = false;
+
+  if (wasPreview) {
+    // Return to review modal
+    document.getElementById('review-overlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('review-close').focus();
+  } else {
+    document.body.style.overflow = '';
+    // Return focus to the card that opened the modal
+    if (modalTriggerEl) {
+      modalTriggerEl.focus();
+      modalTriggerEl = null;
+    }
   }
 }
 
@@ -498,6 +508,120 @@ function setupFilters() {
       currentFilter = btn.dataset.filter;
       renderGallery();
     });
+  });
+}
+
+/* --- Review Order Modal --- */
+
+function openReviewModal() {
+  closeModal(); // Defensively close detail modal if open
+  renderReviewItems();
+  updateReviewOrderButton();
+  const overlay = document.getElementById('review-overlay');
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('review-close').focus();
+}
+
+function closeReviewModal() {
+  document.getElementById('review-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  updateCardStates();
+  updateSelectionBar();
+}
+
+function renderReviewItems() {
+  const container = document.getElementById('review-items');
+  if (selectedPrints.length === 0) {
+    container.innerHTML = '<p class="review-empty">No prints selected.</p>';
+    return;
+  }
+  container.innerHTML = selectedPrints.map(p => `
+    <div class="review-item" data-id="${escapeHTML(p.id)}">
+      <img class="review-item-thumb" src="images/collection/${escapeHTML(p.id)}.jpg" alt="${escapeHTML(p.name)}">
+      <span class="review-item-name">${escapeHTML(p.name)}</span>
+      <button class="review-item-remove" aria-label="Remove ${escapeHTML(p.name)}" data-remove="${escapeHTML(p.id)}">&times;</button>
+    </div>
+  `).join('');
+}
+
+function removeReviewItem(printId) {
+  toggleSelect(printId);
+  renderReviewItems();
+  updateReviewOrderButton();
+  if (selectedPrints.length === 0) {
+    closeReviewModal();
+  }
+}
+
+function updateReviewOrderButton() {
+  const btn = document.getElementById('review-order-cta');
+  if (selectedPrints.length === MAX_PICKS) {
+    btn.classList.remove('disabled');
+    btn.disabled = false;
+  } else {
+    btn.classList.add('disabled');
+    btn.disabled = true;
+  }
+}
+
+function setupReviewModal() {
+  const overlay = document.getElementById('review-overlay');
+  const closeBtn = document.getElementById('review-close');
+  const backBtn = document.getElementById('review-back');
+  const orderBtn = document.getElementById('review-order-cta');
+  const itemsContainer = document.getElementById('review-items');
+
+  closeBtn.addEventListener('click', closeReviewModal);
+  backBtn.addEventListener('click', closeReviewModal);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeReviewModal();
+  });
+
+  itemsContainer.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-remove]');
+    if (removeBtn) {
+      removeReviewItem(removeBtn.dataset.remove);
+      return;
+    }
+    const thumb = e.target.closest('.review-item-thumb');
+    if (thumb) {
+      const item = thumb.closest('.review-item');
+      if (item) {
+        document.getElementById('review-overlay').classList.remove('active');
+        openModal(item.dataset.id, null, true);
+      }
+    }
+  });
+
+  orderBtn.addEventListener('click', () => {
+    if (selectedPrints.length !== MAX_PICKS) return;
+    const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
+    const waText = encodeURIComponent(
+      `Hi! I'd like to order a frame with these ${selectedPrints.length} prints: ${printNames}. Is this available?`
+    );
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
+    window.open(waUrl, '_blank', 'noopener');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeReviewModal();
+    if (e.key === 'Tab') {
+      const modal = overlay.querySelector('.review-modal');
+      const focusable = modal.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   });
 }
 
