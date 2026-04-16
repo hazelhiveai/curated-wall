@@ -40,6 +40,7 @@ async function init() {
     setupFilters();
     setupModal();
     setupZoom();
+    setupSelectsModal();
     setupReviewModal();
     setupSuccessModal();
     setupScrollTop();
@@ -53,28 +54,11 @@ async function init() {
 
 function renderGallery() {
   const grid = document.getElementById('product-grid');
-  const selectedSection = document.getElementById('my-order');
-  const selectedGrid = document.getElementById('selected-grid');
   const emptyMsg = document.getElementById('gallery-empty');
 
-  // Render selected prints sub-section (ignores filter)
-  if (selectedPrints.length > 0) {
-    selectedSection.style.display = '';
-    selectedGrid.innerHTML = selectedPrints.map((print, i) => createCard(print, i)).join('');
-    selectedGrid.querySelectorAll('.btn-select.selected').forEach(btn => {
-      btn.textContent = 'Remove';
-      btn.title = 'Click to remove';
-    });
-    attachImageErrorHandlers(selectedGrid);
-  } else {
-    selectedSection.style.display = 'none';
-    selectedGrid.innerHTML = '';
-  }
+  const filtered = filterPrints();
 
-  // Render main grid excluding selected prints
-  const filtered = filterPrints().filter(p => !selectedPrints.some(s => s.id === p.id));
-
-  if (filtered.length === 0 && selectedPrints.length === 0) {
+  if (filtered.length === 0) {
     grid.innerHTML = '';
     emptyMsg.style.display = 'block';
     return;
@@ -184,7 +168,6 @@ function setupSelectDelegation() {
     toggleSelect(btn.dataset.select);
   };
   document.getElementById('product-grid').addEventListener('click', handler);
-  document.getElementById('selected-grid').addEventListener('click', handler);
 }
 
 function toggleSelect(printId) {
@@ -195,6 +178,7 @@ function toggleSelect(printId) {
     if (selectedPrints.length >= MAX_PICKS) return;
     const print = allPrints.find(p => p.id === printId);
     if (print) selectedPrints.push(print);
+    openSelectsModal();
   }
   renderGallery();
   updateSelectionBar();
@@ -315,7 +299,6 @@ function setupModal() {
     openModal(card.dataset.id, card);
   };
   document.getElementById('product-grid').addEventListener('click', cardClickHandler);
-  document.getElementById('selected-grid').addEventListener('click', cardClickHandler);
 
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => {
@@ -540,6 +523,97 @@ function setupFilters() {
       currentFilter = btn.dataset.filter;
       renderGallery();
     });
+  });
+}
+
+/* --- My Selects Modal --- */
+
+function renderSelectsModal() {
+  const itemsEl = document.getElementById('selects-items');
+  const subtitleEl = document.getElementById('selects-subtitle');
+  const closeBtn = document.getElementById('selects-close-btn');
+  const orderBtn = document.getElementById('selects-order-cta');
+  const count = selectedPrints.length;
+
+  subtitleEl.textContent = `${count} of ${MAX_PICKS} prints selected`;
+
+  if (count === 0) {
+    itemsEl.innerHTML = '<p class="selects-empty">No prints selected yet.</p>';
+  } else {
+    itemsEl.innerHTML = selectedPrints.map(p =>
+      `<div class="review-item" data-id="${p.id}">
+        <img class="review-item-thumb" src="${p.image}" alt="${p.name}">
+        <span class="review-item-name">${p.name}</span>
+        <button class="review-item-remove" data-remove="${p.id}" aria-label="Remove ${p.name}">&times;</button>
+      </div>`
+    ).join('');
+  }
+
+  if (count >= MAX_PICKS) {
+    closeBtn.style.display = 'none';
+    orderBtn.style.display = '';
+  } else {
+    closeBtn.style.display = '';
+    orderBtn.style.display = 'none';
+  }
+}
+
+function openSelectsModal() {
+  renderSelectsModal();
+  const overlay = document.getElementById('selects-overlay');
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('selects-close').focus();
+}
+
+function closeSelectsModal() {
+  document.getElementById('selects-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function setupSelectsModal() {
+  const overlay = document.getElementById('selects-overlay');
+  const closeBtn = document.getElementById('selects-close');
+  const closeBtnAction = document.getElementById('selects-close-btn');
+  const itemsEl = document.getElementById('selects-items');
+  const orderBtn = document.getElementById('selects-order-cta');
+
+  closeBtn.addEventListener('click', closeSelectsModal);
+  closeBtnAction.addEventListener('click', closeSelectsModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSelectsModal();
+  });
+
+  itemsEl.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-remove]');
+    if (!removeBtn) return;
+    const id = removeBtn.dataset.remove;
+    const index = selectedPrints.findIndex(p => p.id === id);
+    if (index > -1) selectedPrints.splice(index, 1);
+    renderGallery();
+    updateSelectionBar();
+    if (selectedPrints.length === 0) {
+      closeSelectsModal();
+    } else {
+      renderSelectsModal();
+    }
+  });
+
+  orderBtn.addEventListener('click', () => {
+    if (selectedPrints.length !== MAX_PICKS) return;
+    const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
+    const waText = encodeURIComponent(
+      `Hi! I'd like to order a frame with these ${selectedPrints.length} prints: ${printNames}. Is this available?`
+    );
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
+    window.open(waUrl, '_blank', 'noopener');
+    closeSelectsModal();
+    openSuccessModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeSelectsModal();
   });
 }
 

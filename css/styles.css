@@ -1264,43 +1264,106 @@ a:focus-visible {
   height: 0;
 }
 
-/* --- My Order Section --- */
+/* --- My Selects Modal --- */
 
-.my-order {
-  padding: 48px 0 16px;
+.selects-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.my-order .section-title {
-  text-align: left;
+.selects-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.selects-modal {
+  position: relative;
+  width: 92%;
+  max-width: 520px;
+  max-height: 90vh;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.35s ease;
+  overflow-y: auto;
+}
+
+.selects-modal-body {
+  padding: 32px;
+}
+
+.selects-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.selects-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 20px;
+}
+
+.selects-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 24px;
 }
 
-.selected-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+.selects-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  padding: 16px 0;
 }
 
-.selected-grid .card-image.aspect-landscape {
-  aspect-ratio: 3 / 4;
+.selects-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.selected-grid .btn-select.selected {
-  background: #d4d4d4;
-  border-color: #d4d4d4;
-  color: #2c2c2c;
+.selects-close-btn {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.selected-grid .btn-select.selected:hover {
-  background: #c0c0c0;
-  border-color: #c0c0c0;
+.selects-close-btn:hover {
+  background: var(--color-border);
 }
 
+.selects-order-cta {
+  width: 100%;
+}
 
 @media (max-width: 768px) {
-  .selected-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+  .selects-overlay {
+    align-items: flex-end;
+  }
+  .selects-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .selects-modal-body {
+    padding: 32px 20px;
   }
 }
 
