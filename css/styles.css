@@ -462,6 +462,7 @@ a:focus-visible {
 /* --- Gallery --- */
 .gallery {
   padding: 60px 0 100px;
+  scroll-margin-top: 64px;
 }
 
 .gallery-header {
@@ -1267,6 +1268,11 @@ a:focus-visible {
 
 .my-order {
   padding: 48px 0 16px;
+}
+
+.my-order .section-title {
+  text-align: left;
+  margin-bottom: 24px;
 }
 
 .selected-grid {
