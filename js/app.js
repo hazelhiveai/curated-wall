@@ -53,7 +53,7 @@ async function init() {
 
 function renderGallery() {
   const grid = document.getElementById('product-grid');
-  const selectedSection = document.getElementById('selected-section');
+  const selectedSection = document.getElementById('my-order');
   const selectedGrid = document.getElementById('selected-grid');
   const emptyMsg = document.getElementById('gallery-empty');
 
