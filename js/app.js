@@ -2,7 +2,7 @@
    CURATED WALL — App Logic
    ============================================ */
 
-const WHATSAPP_NUMBER = '916361096873';
+const WHATSAPP_NUMBER = SITE_CONFIG.whatsappNumber;
 const PRICE = '₹999';
 const MAX_PICKS = 3;
 
@@ -41,7 +41,9 @@ async function init() {
     setupModal();
     setupZoom();
     setupReviewModal();
+    setupSuccessModal();
     setupScrollTop();
+    setupWhatsAppLinks();
   } catch (err) {
     console.error('Failed to load prints:', err);
     document.getElementById('product-grid').innerHTML =
@@ -51,21 +53,47 @@ async function init() {
 
 function renderGallery() {
   const grid = document.getElementById('product-grid');
+  const selectedSection = document.getElementById('selected-section');
+  const selectedGrid = document.getElementById('selected-grid');
   const emptyMsg = document.getElementById('gallery-empty');
 
-  const filtered = filterPrints();
+  // Render selected prints sub-section (ignores filter)
+  if (selectedPrints.length > 0) {
+    selectedSection.style.display = '';
+    selectedGrid.innerHTML = selectedPrints.map((print, i) => createCard(print, i)).join('');
+    selectedGrid.querySelectorAll('.btn-select.selected').forEach(btn => {
+      btn.textContent = 'Remove';
+      btn.title = 'Click to remove';
+    });
+    attachImageErrorHandlers(selectedGrid);
+  } else {
+    selectedSection.style.display = 'none';
+    selectedGrid.innerHTML = '';
+  }
 
-  if (filtered.length === 0) {
+  // Render main grid excluding selected prints
+  const filtered = filterPrints().filter(p => !selectedPrints.some(s => s.id === p.id));
+
+  if (filtered.length === 0 && selectedPrints.length === 0) {
     grid.innerHTML = '';
     emptyMsg.style.display = 'block';
     return;
   }
 
   emptyMsg.style.display = 'none';
-  grid.innerHTML = filtered.map((print, i) => createCard(print, i)).join('');
 
-  // Attach image error handlers (safe placeholder without innerHTML XSS)
-  grid.querySelectorAll('.product-card img').forEach(img => {
+  // Insert separator between portrait and landscape sections
+  const cards = filtered.map((print, i) => createCard(print, i));
+  const firstLandscapeIdx = filtered.findIndex(p => p.orientation === 'landscape');
+  if (firstLandscapeIdx > 0) {
+    cards.splice(firstLandscapeIdx, 0, '<div class="grid-separator"></div>');
+  }
+  grid.innerHTML = cards.join('');
+  attachImageErrorHandlers(grid);
+}
+
+function attachImageErrorHandlers(container) {
+  container.querySelectorAll('.product-card img').forEach(img => {
     img.addEventListener('error', function () {
       const card = this.closest('.product-card');
       const color = card.dataset.color || '#ccc';
@@ -150,11 +178,13 @@ function createCard(print, index) {
 
 /* --- Selection Logic --- */
 function setupSelectDelegation() {
-  document.getElementById('product-grid').addEventListener('click', (e) => {
+  const handler = (e) => {
     const btn = e.target.closest('[data-select]');
     if (!btn) return;
     toggleSelect(btn.dataset.select);
-  });
+  };
+  document.getElementById('product-grid').addEventListener('click', handler);
+  document.getElementById('selected-grid').addEventListener('click', handler);
 }
 
 function toggleSelect(printId) {
@@ -166,7 +196,7 @@ function toggleSelect(printId) {
     const print = allPrints.find(p => p.id === printId);
     if (print) selectedPrints.push(print);
   }
-  updateCardStates();
+  renderGallery();
   updateSelectionBar();
 }
 
@@ -278,12 +308,14 @@ function setupModal() {
   const nextBtn = document.getElementById('modal-next');
   const selectBtn = document.getElementById('modal-select');
 
-  document.getElementById('product-grid').addEventListener('click', (e) => {
+  const cardClickHandler = (e) => {
     if (e.target.closest('[data-select]')) return;
     const card = e.target.closest('.product-card');
     if (!card) return;
     openModal(card.dataset.id, card);
-  });
+  };
+  document.getElementById('product-grid').addEventListener('click', cardClickHandler);
+  document.getElementById('selected-grid').addEventListener('click', cardClickHandler);
 
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => {
@@ -526,7 +558,7 @@ function openReviewModal() {
 function closeReviewModal() {
   document.getElementById('review-overlay').classList.remove('active');
   document.body.style.overflow = '';
-  updateCardStates();
+  renderGallery();
   updateSelectionBar();
 }
 
@@ -573,7 +605,10 @@ function setupReviewModal() {
   const itemsContainer = document.getElementById('review-items');
 
   closeBtn.addEventListener('click', closeReviewModal);
-  backBtn.addEventListener('click', closeReviewModal);
+  backBtn.addEventListener('click', () => {
+    closeReviewModal();
+    document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
+  });
 
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeReviewModal();
@@ -603,6 +638,9 @@ function setupReviewModal() {
     );
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     window.open(waUrl, '_blank', 'noopener');
+    // Close review modal and show success modal
+    document.getElementById('review-overlay').classList.remove('active');
+    openSuccessModal();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -625,6 +663,39 @@ function setupReviewModal() {
   });
 }
 
+/* --- Success Modal --- */
+
+function openSuccessModal() {
+  const overlay = document.getElementById('success-overlay');
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('success-dismiss').focus();
+}
+
+function closeSuccessModal() {
+  document.getElementById('success-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+  renderGallery();
+  updateSelectionBar();
+}
+
+function setupSuccessModal() {
+  const overlay = document.getElementById('success-overlay');
+  const closeBtn = document.getElementById('success-close');
+  const dismissBtn = document.getElementById('success-dismiss');
+
+  closeBtn.addEventListener('click', closeSuccessModal);
+  dismissBtn.addEventListener('click', closeSuccessModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSuccessModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeSuccessModal();
+  });
+}
+
 /* --- Scroll to Top --- */
 function setupScrollTop() {
   const btn = document.getElementById('scroll-top');
@@ -640,8 +711,17 @@ function setupScrollTop() {
   });
 
   btn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
   });
+}
+
+function setupWhatsAppLinks() {
+  const waMsg = encodeURIComponent('Hi! I have a question about Curated Wall.');
+  const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
+  const headerLink = document.getElementById('header-wa-link');
+  const footerLink = document.getElementById('footer-wa-link');
+  if (headerLink) headerLink.href = waUrl;
+  if (footerLink) footerLink.href = waUrl;
 }
 
 // Initialize

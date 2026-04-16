@@ -146,26 +146,20 @@ a:focus-visible {
   text-align: center;
 }
 
-.hero-label {
-  display: inline-block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--color-badge-text);
-  background: var(--color-badge-bg);
-  padding: 6px 16px;
-  border-radius: 100px;
-  margin-bottom: 24px;
-}
-
 .hero-title {
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 5vw, 3.8rem);
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+.hero-tagline {
+  font-size: 1.15rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  letter-spacing: 0.01em;
 }
 
 .hero-subtitle {
@@ -181,7 +175,14 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 36px;
+  margin-bottom: 16px;
+}
+
+.hero-trust {
+  font-size: 0.95rem;
+  color: #7b506f;
+  margin-bottom: 32px;
+  letter-spacing: 0.01em;
 }
 
 .price-detail {
@@ -1252,6 +1253,131 @@ a:focus-visible {
 
   .zoom-hint {
     display: none;
+  }
+}
+
+/* --- Grid Separator (portrait/landscape break) --- */
+
+.grid-separator {
+  grid-column: 1 / -1;
+  height: 0;
+}
+
+/* --- Selected Sub-Section --- */
+
+.selected-section {
+  margin-bottom: 32px;
+}
+
+.selected-section-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--color-text);
+}
+
+.selected-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.selected-grid .card-image.aspect-landscape {
+  aspect-ratio: 3 / 4;
+}
+
+.selected-grid .btn-select.selected {
+  background: #d4d4d4;
+  border-color: #d4d4d4;
+  color: #2c2c2c;
+}
+
+.selected-grid .btn-select.selected:hover {
+  background: #c0c0c0;
+  border-color: #c0c0c0;
+}
+
+
+@media (max-width: 768px) {
+  .selected-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+/* ============================================
+   SUCCESS MODAL
+   ============================================ */
+
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.success-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.success-modal {
+  position: relative;
+  width: 92%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.35s ease;
+}
+
+.success-modal-body {
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-whatsapp);
+  color: #2c2c2c;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.success-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.success-message {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.success-dismiss {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .success-modal-body {
+    padding: 32px 20px;
   }
 }
 
