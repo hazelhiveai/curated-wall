@@ -542,9 +542,9 @@ function renderSelectsModal() {
   } else {
     itemsEl.innerHTML = selectedPrints.map(p =>
       `<div class="review-item" data-id="${p.id}">
-        <img class="review-item-thumb" src="${p.image}" alt="${p.name}">
-        <span class="review-item-name">${p.name}</span>
-        <button class="review-item-remove" data-remove="${p.id}" aria-label="Remove ${p.name}">&times;</button>
+        <img class="review-item-thumb" src="images/collection/${escapeHTML(p.id)}.jpg" alt="${escapeHTML(p.name)}">
+        <span class="review-item-name">${escapeHTML(p.name)}</span>
+        <button class="review-item-remove" data-remove="${p.id}" aria-label="Remove ${escapeHTML(p.name)}">&times;</button>
       </div>`
     ).join('');
   }
