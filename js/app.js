@@ -43,6 +43,7 @@ async function init() {
     setupSelectsModal();
     setupReviewModal();
     setupSuccessModal();
+    setupReturnsModal();
     setupScrollTop();
     setupWhatsAppLinks();
   } catch (err) {
@@ -776,6 +777,40 @@ function setupSuccessModal() {
   document.addEventListener('keydown', (e) => {
     if (!overlay.classList.contains('active')) return;
     if (e.key === 'Escape') closeSuccessModal();
+  });
+}
+
+/* --- Returns & Refund Modal --- */
+function openReturnsModal() {
+  const overlay = document.getElementById('returns-overlay');
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('returns-close').focus();
+}
+
+function closeReturnsModal() {
+  document.getElementById('returns-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function setupReturnsModal() {
+  const overlay = document.getElementById('returns-overlay');
+  const closeBtn = document.getElementById('returns-close');
+  const link = document.getElementById('returns-link');
+
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    openReturnsModal();
+  });
+
+  closeBtn.addEventListener('click', closeReturnsModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeReturnsModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('active')) return;
+    if (e.key === 'Escape') closeReturnsModal();
   });
 }
 

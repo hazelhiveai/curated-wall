@@ -183,6 +183,12 @@ a:focus-visible {
   color: #7b506f;
   margin-bottom: 32px;
   letter-spacing: 0.01em;
+  font-style: italic;
+}
+
+.hero-trust + .hero-trust {
+  margin-top: -24px;
+  font-style: normal;
 }
 
 .price-detail {
@@ -811,8 +817,9 @@ a:focus-visible {
 }
 
 .footer h4 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.1rem;
+  font-weight: 600;
   margin-bottom: 16px;
 }
 
@@ -1446,6 +1453,103 @@ a:focus-visible {
 
 @media (max-width: 768px) {
   .success-modal-body {
+    padding: 32px 20px;
+  }
+}
+
+/* ============================================
+   RETURNS & REFUND MODAL
+   ============================================ */
+
+.returns-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.returns-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.returns-modal {
+  position: relative;
+  width: 92%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideUp 0.35s ease;
+}
+
+.returns-modal-body {
+  padding: 40px 32px;
+}
+
+.returns-title {
+  font-family: var(--font-body);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.returns-modal-body p {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.returns-modal-body h4 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.returns-modal-body ul {
+  list-style: disc;
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.returns-modal-body li {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.returns-note {
+  font-style: italic;
+  margin-top: 8px;
+}
+
+.footer-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 0.88rem;
+  color: var(--color-accent-light, #ccc);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .returns-modal-body {
     padding: 32px 20px;
   }
 }
