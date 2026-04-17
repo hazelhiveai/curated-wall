@@ -183,12 +183,10 @@ a:focus-visible {
   color: #7b506f;
   margin-bottom: 32px;
   letter-spacing: 0.01em;
-  font-style: italic;
 }
 
 .hero-trust + .hero-trust {
   margin-top: -24px;
-  font-style: normal;
 }
 
 .price-detail {
