@@ -585,6 +585,15 @@ function setupSelectsModal() {
   });
 
   itemsEl.addEventListener('click', (e) => {
+    const thumb = e.target.closest('.review-item-thumb');
+    if (thumb) {
+      const item = thumb.closest('.review-item');
+      if (item) {
+        closeSelectsModal();
+        openModal(item.dataset.id, null, true);
+      }
+      return;
+    }
     const removeBtn = e.target.closest('[data-remove]');
     if (!removeBtn) return;
     const id = removeBtn.dataset.remove;
