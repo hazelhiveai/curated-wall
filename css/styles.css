@@ -149,13 +149,14 @@ a:focus-visible {
 .hero-badge {
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #7b506f;
+  color: #5c3254;
+  background-color: #f5e0f0;
   border: 1.5px solid #c9a8be;
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: 6px 16px;
   margin-bottom: 20px;
 }
 
