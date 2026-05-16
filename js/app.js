@@ -117,7 +117,7 @@ function createCard(print, index) {
   const isSelected = selectedPrints.some(p => p.id === print.id);
   const isFull = selectedPrints.length >= MAX_PICKS && !isSelected;
   const stockClass = isSoldOut ? 'out-of-stock' : print.stock === 1 ? 'low-stock' : 'in-stock';
-  const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : print.stock >= 100 ? 'Available' : `${print.stock} in stock`;
+  const stockText = isSoldOut ? 'Sold Out' : print.stock === 1 ? 'Only 1 left' : print.stock >= 100 ? '' : `${print.stock} in stock`;
   const color = PALETTE[index % PALETTE.length];
   const aspectClass = print.orientation === 'portrait' ? 'aspect-portrait' : 'aspect-landscape';
   const safeId = escapeHTML(print.id);
@@ -154,7 +154,7 @@ function createCard(print, index) {
         <h3 class="card-name">${safeName}</h3>
         <p class="card-description">${safeDesc}</p>
         <div class="card-footer">
-          <span class="card-stock ${stockClass}">${stockText}</span>
+          ${stockText ? `<span class="card-stock ${stockClass}">${stockText}</span>` : ''}
         </div>
         ${isSoldOut ? '' : `<button class="${selectBtnClass}" data-select="${safeId}" ${isFull ? 'disabled' : ''} title="${selectBtnTitle}">${selectBtnText}</button>`}
       </div>
@@ -245,7 +245,7 @@ function updateSelectionBar() {
   }
 
   bar.classList.add('visible');
-  countEl.textContent = `${count} of ${MAX_PICKS} prints selected`;
+  countEl.textContent = 'Select 3 prints to place your order.';
   namesEl.textContent = selectedPrints.map(p => p.name).join(' · ');
 
   if (count === MAX_PICKS) {
@@ -412,8 +412,8 @@ function updateModalContent() {
     stockEl.textContent = 'Only 1 left';
     stockEl.className = 'modal-stock card-stock low-stock';
   } else {
-    stockEl.textContent = print.stock >= 100 ? 'Available' : `${print.stock} in stock`;
-    stockEl.className = 'modal-stock card-stock in-stock';
+    stockEl.textContent = print.stock >= 100 ? '' : `${print.stock} in stock`;
+    stockEl.className = print.stock >= 100 ? 'modal-stock card-stock' : 'modal-stock card-stock in-stock';
   }
 
   const selectBtn = document.getElementById('modal-select');
@@ -536,7 +536,7 @@ function renderSelectsModal() {
   const orderBtn = document.getElementById('selects-order-cta');
   const count = selectedPrints.length;
 
-  subtitleEl.textContent = `${count} of ${MAX_PICKS} prints selected`;
+  subtitleEl.textContent = 'Select 3 prints to place your order.';
 
   if (count === 0) {
     itemsEl.innerHTML = '<p class="selects-empty">No prints selected yet.</p>';
@@ -611,9 +611,9 @@ function setupSelectsModal() {
 
   orderBtn.addEventListener('click', () => {
     if (selectedPrints.length !== MAX_PICKS) return;
-    const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
+    const printNames = selectedPrints.map(p => p.name).join('\n');
     const waText = encodeURIComponent(
-      `Hi! I'd like to order a frame with these ${selectedPrints.length} prints: ${printNames}. Is this available?`
+      `Hi! I would like to order a frame with these 3 prints:\n${printNames}`
     );
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     window.open(waUrl, '_blank', 'noopener');
@@ -716,9 +716,9 @@ function setupReviewModal() {
 
   orderBtn.addEventListener('click', () => {
     if (selectedPrints.length !== MAX_PICKS) return;
-    const printNames = selectedPrints.map(p => `"${p.name}" (${p.id})`).join(', ');
+    const printNames = selectedPrints.map(p => p.name).join('\n');
     const waText = encodeURIComponent(
-      `Hi! I'd like to order a frame with these ${selectedPrints.length} prints: ${printNames}. Is this available?`
+      `Hi! I would like to order a frame with these 3 prints:\n${printNames}`
     );
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     window.open(waUrl, '_blank', 'noopener');
