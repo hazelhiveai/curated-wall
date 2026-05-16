@@ -611,9 +611,11 @@ function setupSelectsModal() {
 
   orderBtn.addEventListener('click', () => {
     if (selectedPrints.length !== MAX_PICKS) return;
-    const printNames = selectedPrints.map(p => p.name).join('\n');
+    const printLines = selectedPrints.map((p, i, arr) =>
+      `"${p.name}" (${p.id})${i < arr.length - 1 ? ',' : ''}`
+    ).join('\n');
     const waText = encodeURIComponent(
-      `Hi! I would like to order a frame with these 3 prints:\n${printNames}`
+      `Hi! I would like to order a frame with these 3 prints:\n${printLines}`
     );
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     window.open(waUrl, '_blank', 'noopener');
@@ -716,9 +718,11 @@ function setupReviewModal() {
 
   orderBtn.addEventListener('click', () => {
     if (selectedPrints.length !== MAX_PICKS) return;
-    const printNames = selectedPrints.map(p => p.name).join('\n');
+    const printLines = selectedPrints.map((p, i, arr) =>
+      `"${p.name}" (${p.id})${i < arr.length - 1 ? ',' : ''}`
+    ).join('\n');
     const waText = encodeURIComponent(
-      `Hi! I would like to order a frame with these 3 prints:\n${printNames}`
+      `Hi! I would like to order a frame with these 3 prints:\n${printLines}`
     );
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
     window.open(waUrl, '_blank', 'noopener');
